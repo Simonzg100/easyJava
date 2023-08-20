@@ -1,42 +1,53 @@
 package com.easyjava.builder;
 
-import com.easyjava.bean.Constants;
-import com.easyjava.utils.DateUtils;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.util.Date;
-
 
 public class BuildComment {
-    public static void createClassComment(BufferedWriter bw, String classComment) throws IOException {
-        /**
-         * @Description:
-         * @date: 2023/9/10
-         */
+    /**
+     * 构建类上面的注释
+     *
+     * @param bw
+     * @param text
+     * @return
+     * @throws IOException
+     */
+    public static BufferedWriter buildClassComment(BufferedWriter bw, String text) throws IOException {
+        bw.newLine();
+        bw.newLine();
         bw.write("/**");
         bw.newLine();
-        bw.write(" * @Description:" + classComment);
+        bw.write(" * " + text);
         bw.newLine();
-        bw.write(" * @author:" + Constants.AUTHOR_COMMENT);
-        bw.newLine();
-        bw.write(" * @date:" + DateUtils.format(new Date(), DateUtils._YYYYMMDD));
-        bw.newLine();
-        bw.write("*/");
-        bw.newLine();
+        bw.write(" */");
+        return bw;
     }
 
-
-    public static void createFieldComment(BufferedWriter bw, String fieldComment) throws IOException {
+    public static BufferedWriter buildPropertyComment(BufferedWriter bw, String text) throws IOException {
+        bw.newLine();
         bw.write("\t/**");
         bw.newLine();
-        bw.write("\t * " + (fieldComment == null ? " ": fieldComment) );
+        bw.write("\t * " + text);
         bw.newLine();
         bw.write("\t */");
-        bw.newLine();
+        return bw;
     }
 
-    public static void createMethodComment() {
-
+    /**
+     * 构建方法上面的注释
+     *
+     * @param bw
+     * @param text
+     * @return
+     * @throws IOException
+     */
+    public static BufferedWriter buildMethodComment(BufferedWriter bw, String text) throws IOException {
+        bw.newLine();
+        bw.write("\t/**");
+        bw.newLine();
+        bw.write("\t * " + text);
+        bw.newLine();
+        bw.write("\t */");
+        return bw;
     }
 }

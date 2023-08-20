@@ -1,11 +1,11 @@
 package com.easyjava.builder;
 
+
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
-import com.easyjava.utils.JsonUtils;
 import com.easyjava.utils.PropertiesUtils;
-import com.easyjava.utils.StringUtils;
+import com.easyjava.utils.StringTools;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,245 +16,240 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 吧数据库里面的信息全部写入到tableinfo中。
- */
 public class BuildTable {
-    // use jdbc to read database
-    private static final Logger logger = LoggerFactory.getLogger(BuildTable.class);
     private static Connection conn = null;
 
-    private static String SQL_SHOW_TABLE_STATUS = "show table status"; // get the table and comment
-    private static String SQL_SHOW_TABLE_FIELDS = "show full fields from %s"; // get the table and comment
-    private static String SQL_SHOW_TABLE_INDEX = "show index from %s"; // get the table and comment
+    private static final Logger logger = LoggerFactory.getLogger(BuildTable.class);
 
+    private static final String SQL_SHOW_TABLE_STATUS = "show table status";
 
+    private static final String SQL_PREFIX_SHOW_FIELDS = "show full fields from ";
 
-    static {
+    private static final String KEY_AUTO_INCREMENT = "auto_increment";
+
+    public BuildTable() throws ClassNotFoundException, SQLException {
         String driverName = PropertiesUtils.getString("db.driver.name");
         String url = PropertiesUtils.getString("db.url");
         String user = PropertiesUtils.getString("db.username");
         String password = PropertiesUtils.getString("db.password");
-        try {
-            Class.forName(driverName);
-            conn = DriverManager.getConnection(url,user,password);
-        } catch (Exception e) {
-            logger.error("fail to connect database" + e);
-        }
+        Class.forName(driverName);
+        conn = DriverManager.getConnection(url, user, password);
     }
 
-    public static List<TableInfo> getTables(){
+    /**
+     * 查询索引
+     */
+    private static final String SQL_PREFIX_SELECT_INDEX = "show index from ";
+
+    public List<TableInfo> getTables() {
         PreparedStatement ps = null;
-        ResultSet tableResult = null;
-
-        List<TableInfo> tableInfoList = new ArrayList<TableInfo>();
-
+        ResultSet tableResults = null;
         try {
             ps = conn.prepareStatement(SQL_SHOW_TABLE_STATUS);
-            tableResult = ps.executeQuery();
-            while (tableResult.next()) {
-                String tableName = tableResult.getString("name");
-                String comment = tableResult.getString("comment");
-//                logger.info("tableName: {}, comment:{}", tableName, comment);
+            tableResults = ps.executeQuery();
 
-                String beanName = tableName; // tb_product_info
 
-                //  delete "_"
-                if (Constants.IGNORE_TABLE_PREFIX){
-                    beanName = tableName.substring(beanName.indexOf("_") + 1);
+            List<TableInfo> tableInfoList = new ArrayList();
+            //读取表
+            while (tableResults.next()) {
+                String tableName = tableResults.getString("name");
+                String tableComment = tableResults.getString("comment");
+                String beanName = tableName;
+                if (Constants.IGNORE_TABLE_PREFIX) {
+                    int index_prefix = tableName.indexOf("_");
+                    if (index_prefix != -1) {
+                        beanName = tableName.substring(index_prefix + 1);
+                    }
                 }
-
-                // upper first letter
-                beanName = processField(beanName,true);
+                beanName = processField(true, beanName);
 
                 TableInfo tableInfo = new TableInfo();
                 tableInfo.setTableName(tableName);
+                tableInfo.setComment(tableComment);
                 tableInfo.setBeanName(beanName);
-                tableInfo.setComment(comment);
                 tableInfo.setBeanParamName(beanName + Constants.SUFFIX_BEAN_PARAM);
+                // logger.info("表：{}，备注:{}，JaveBean:{}", tableName, tableComment, beanName);
+                //获取字段信息
 
-                readFieldInfo(tableInfo);
-                //转换为 json格式去查看 不然就只是地址
-//                logger.info("表: {}", JsonUtils.convertObj2Json(tableInfo));
-//                logger.info("字段: {}", JsonUtils.convertObj2Json(fieldInfoList));
-                //解析唯一索引
-                getKeyIndexInfo(tableInfo);
-//                logger.info("table: {}", JsonUtils.convertObj2Json(tableInfo));
+                Map<String, FieldInfo> fieldInfoMap = new HashMap();
+                List<FieldInfo> fieldInfoList = readFieldInfo(tableInfo, fieldInfoMap);
+                tableInfo.setFieldList(fieldInfoList);
+
+
+                //读取主键
+                getKeyIndexInfo(tableInfo, fieldInfoMap);
+
                 tableInfoList.add(tableInfo);
             }
+            return tableInfoList;
         } catch (Exception e) {
-            logger.error("fail to read table");
-        }finally {
-            if(tableResult != null) {
+            logger.error("获取数据库表失败", e);
+            throw new RuntimeException("获取数据库表失败");
+        } finally {
+            if (null != tableResults) {
                 try {
-                    tableResult.close();
+                    tableResults.close();
                 } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
             }
-            if(ps != null) {
+            if (ps != null) {
                 try {
                     ps.close();
                 } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
             }
-            if (conn != null){
+
+            if (conn != null) {
                 try {
                     conn.close();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }
-        return tableInfoList;
     }
 
-    private static String processField(String field, Boolean upperCaseFirstLetter){
-        StringBuffer sb =  new StringBuffer();
-        String[] fields = field.split("_");
-        sb.append(upperCaseFirstLetter? StringUtils.upperCaseFirstLetter(fields[0]):fields[0]);
-
-        for(int i = 1, len = fields.length; i < len; i++) {
-            sb.append(StringUtils.upperCaseFirstLetter(fields[i]));
+    private static void getKeyIndexInfo(TableInfo tableInfo, Map<String, FieldInfo> fieldInfoMap) {
+        PreparedStatement ps = null;
+        ResultSet results = null;
+        try {
+            ps = conn.prepareStatement(SQL_PREFIX_SELECT_INDEX + tableInfo.getTableName());
+            results = ps.executeQuery();
+            //获取表信息
+            while (results.next()) {
+                String keyName = results.getString("KEY_NAME");
+                int nonUnique = results.getInt("NON_UNIQUE");
+                String columnName = results.getString("COLUMN_NAME");
+                if (nonUnique == 0) {//unique  唯一索引
+                    List<FieldInfo> keyColumnList = tableInfo.getKeyIndexMap().get(keyName);
+                    if (null == keyColumnList) {
+                        keyColumnList = new ArrayList();
+                        tableInfo.getKeyIndexMap().put(keyName, keyColumnList);
+                    }
+                    keyColumnList.add(fieldInfoMap.get(columnName));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (null != results) {
+                try {
+                    results.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
-        return  sb.toString();
     }
 
-    private static void readFieldInfo(TableInfo tableInfo) {
+    private static List<FieldInfo> readFieldInfo(TableInfo tableInfo, Map<String, FieldInfo> fieldInfoMap) {
         PreparedStatement ps = null;
         ResultSet fieldResult = null;
-        List<FieldInfo> fieldInfoList = new ArrayList<FieldInfo>();
-        Boolean haveDateTime = false;
-        Boolean haveDate = false;
-        Boolean haveBigDecimal = false;
         try {
-            ps = conn.prepareStatement(String.format(SQL_SHOW_TABLE_FIELDS, tableInfo.getTableName()));
+            ps = conn.prepareStatement(SQL_PREFIX_SHOW_FIELDS + tableInfo.getTableName());
             fieldResult = ps.executeQuery();
+            List<FieldInfo> filedInfoList = new ArrayList();
             while (fieldResult.next()) {
-                String field = fieldResult.getString("field");
+                String field = fieldResult.getString("FIELD");
+                String type = fieldResult.getString("TYPE");
+                String extra = fieldResult.getString("EXTRA");
+                String comment = fieldResult.getString("COMMENT");
 
-                String type = fieldResult.getString("type");
-                String extra = fieldResult.getString("extra");
-                String comment = fieldResult.getString("comment");
-                 if(type.contains("(")){
-                     type = type.substring(0, type.indexOf("("));
-                 }
-                 String propertyName = processField(field,false);
-
-                 FieldInfo fieldInfo = new FieldInfo();
-
-                 fieldInfo.setFieldName(field);
-                 fieldInfo.setComment(comment);
-                 fieldInfo.setSqlType(type);
-                 fieldInfo.setAutoIncrement("auto_increment".equalsIgnoreCase(extra));
-                 fieldInfo.setPropertyName(propertyName);
-                 fieldInfo.setJavaType(processJavaType(type));
-
-                 fieldInfoList.add(fieldInfo);
-//                logger.info("field: {}, propertyName: {}, type: {}, extra: {}, comment: {}", field, propertyName,type,extra,comment);
-//                logger.info("javatype: {}", fieldInfo.getJavaType());
-                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
-                    haveDateTime = true;
+                if (type.indexOf("(") > 0) {
+                    type = type.substring(0, type.indexOf("("));
                 }
-                if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPES, type)) {
-                    haveBigDecimal = true;
-                }
+
+
+                String propertyName = processField(false, field);
+                String javaType = processFieldType(type);
+
+                //判断是否date类型
                 if (ArrayUtils.contains(Constants.SQL_DATE_TYPES, type)) {
-                    haveDate = true;
+                    tableInfo.setHaveDate(true);
                 }
 
+                //判断是否有datetime类型
+                if (ArrayUtils.contains(Constants.SQL_DATE_TIIME_TYPES, type)) {
+                    tableInfo.setHaveDateTime(true);
+                }
+                //判断是否有bigdecimal类型
+                if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
+                    tableInfo.setHaveBigDecimal(true);
+                }
+
+                FieldInfo fieldInfo = new FieldInfo();
+                fieldInfo.setFieldName(field);
+                fieldInfo.setPropertyName(propertyName);
+                fieldInfo.setSqlType(type);
+                fieldInfo.setJavaType(javaType);
+                fieldInfo.setComment(comment);
+                if (KEY_AUTO_INCREMENT.equalsIgnoreCase(extra)) {
+                    fieldInfo.setAutoIncrement(true);
+                } else {
+                    fieldInfo.setAutoIncrement(false);
+                }
+                // logger.info("字段名:{},类型:{}，扩展:{}，备注:{}，Java类型:{},Jave属性名:{}", field, type, extra, comment, javaType, propertyName);
+                filedInfoList.add(fieldInfo);
+
+                fieldInfoMap.put(field, fieldInfo);
+
             }
-            tableInfo.setHaveDate(haveDate);
-            tableInfo.setHaveBigDecimal(haveBigDecimal);
-            tableInfo.setHaveDateTime(haveDateTime);
-            tableInfo.setFieldList(fieldInfoList);
+            return filedInfoList;
         } catch (Exception e) {
-            logger.error("fail to read table");
-        }finally {
-            if(fieldResult != null) {
+            logger.error("读取表属性失败", e);
+            throw new RuntimeException("读取表属性失败" + tableInfo.getTableName(), e);
+        } finally {
+            if (fieldResult != null) {
                 try {
                     fieldResult.close();
                 } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
             }
-            if(ps != null) {
+            if (ps != null) {
                 try {
                     ps.close();
                 } catch (SQLException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
             }
-
         }
     }
 
-    private static void getKeyIndexInfo(TableInfo tableInfo) {
-        PreparedStatement ps = null;
-        ResultSet fieldResult = null;
-        List<FieldInfo> fieldInfoList = new ArrayList<FieldInfo>();
-
-        try {
-
-            Map<String, FieldInfo> tempMap = new HashMap();
-            for (FieldInfo fieldInfo : tableInfo.getFieldList()) {
-                tempMap.put(fieldInfo.getFieldName(),fieldInfo);
-            }
-
-
-            ps = conn.prepareStatement(String.format(SQL_SHOW_TABLE_INDEX, tableInfo.getTableName()));
-            fieldResult = ps.executeQuery();
-            while (fieldResult.next()) {
-                String keyName = fieldResult.getString("key_name");
-                Integer nonUnique = Integer.valueOf(fieldResult.getString("non_unique"));
-                String columnName = fieldResult.getString("column_name");
-                if (nonUnique == 1) {
-                    continue;
-                }
-
-                List<FieldInfo> keyFieldList = tableInfo.getKeyIndexMap().get(keyName);
-                if (keyFieldList == null) {
-                    keyFieldList = new ArrayList<FieldInfo>();
-                    tableInfo.getKeyIndexMap().put(keyName,keyFieldList);
-                }
-
-                keyFieldList.add(tempMap.get(columnName));
-            }
-        } catch (Exception e) {
-            logger.error("fail to read index table");
-        }finally {
-            if(fieldResult != null) {
-                try {
-                    fieldResult.close();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            if(ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
+    private static String processField(Boolean uperCaseFirstLetter, String field) {
+        StringBuffer sb = new StringBuffer(field.length());
+        String[] fields = field.toLowerCase().split("_");
+        sb.append(uperCaseFirstLetter ? StringTools.upperCaseFirstLetter(fields[0]) : fields[0]);
+        for (int i = 1, len = fields.length; i < len; i++) {
+            sb.append(StringTools.upperCaseFirstLetter(fields[i]));
         }
+        return sb.toString();
     }
 
-    private static String processJavaType(String type) {
-        if(ArrayUtils.contains(Constants.SQL_INTEGER_TYPE,type)){
+
+    private static String processFieldType(String type) {
+
+        if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, type)) {
             return "Integer";
-        } else if(ArrayUtils.contains(Constants.SQL_LONG_TYPE,type)) {
+        } else if (ArrayUtils.contains(Constants.SQL_LONG_TYPE, type)) {
             return "Long";
-        }else if(ArrayUtils.contains(Constants.SQL_STRING_TYPE,type)) {
+        } else if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
             return "String";
-        }else if(ArrayUtils.contains(Constants.SQL_DECIMAL_TYPES,type)) {
-            return "BigDecimal";
-        }else if(ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES,type) || ArrayUtils.contains(Constants.SQL_DATE_TYPES,type)) {
+        } else if (ArrayUtils.contains(Constants.SQL_DATE_TIIME_TYPES, type) || ArrayUtils.contains(Constants.SQL_DATE_TYPES, type)) {
             return "Date";
+        } else if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
+            return "BigDecimal";
         } else {
-            throw new RuntimeException("无法识别的类型: " + type);
+            throw new RuntimeException("无法识别的类型:" + type);
         }
     }
 
