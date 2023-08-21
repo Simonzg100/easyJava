@@ -10,6 +10,11 @@
         <module name="easyjava" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="easyjava (1)" target="1.8" />
+      <module name="easyjava (2)" target="1.5" />
+      <module name="easyjava (3)" target="1.5" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

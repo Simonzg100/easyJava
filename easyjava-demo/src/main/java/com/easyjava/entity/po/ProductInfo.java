@@ -1,176 +1,173 @@
 package com.easyjava.entity.po;
 
-import java.io.Serializable;
-import java.util.Date;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import org.springframework.format.annotation.DateTimeFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.math.BigDecimal;
-import java.util.Properties;
+import java.util.Date;
+import com.easyjava.entity.enums.DateTimePatternEnum;
+import com.easyjava.utils.DateUtil;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.io.Serializable;
 
 
 /**
- * @Description:商品信息
- * @author:simon
- * @date:2023/08/20
-*/
+ * 商品信息
+ */
 public class ProductInfo implements Serializable {
-    /**
-     * product information
-     */
-    private Integer id;
 
-    /**
-     * 公司id
-     */
-    @JsonIgnore
-    private String companyId;
 
-    /**
-     * 商品编号
-     */
-    private String code;
+	/**
+	 * 自增id
+	 */
+	private Integer id;
 
-    /**
-     * 商品名称
-     */
-    private String productName;
+	/**
+	 * 公司id
+	 */
+	@JsonIgnore
+	private String companyId;
 
-    /**
-     * 价格
-     */
-    private BigDecimal price;
+	/**
+	 * 商品编号
+	 */
+	private String code;
 
-    /**
-     * sku类型
-     */
-    private Integer skuType;
+	/**
+	 * 商品名称
+	 */
+	private String productName;
 
-    /**
-     * 颜色类型
-     */
-    private Integer colorType;
+	/**
+	 * 价格
+	 */
+	private BigDecimal price;
 
-    /**
-     * 创建时间
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private Date createTime;
+	/**
+	 * sku类型
+	 */
+	private Integer skuType;
 
-    /**
-     * 创建日期
-     */
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private Date createDate;
+	/**
+	 * 颜色类型
+	 */
+	private Integer colorType;
 
-    /**
-     * 库存
-     */
-    private Long stock;
+	/**
+	 * 创建时间
+	 */
+	@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+	@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+	private Date createTime;
 
-    /**
-     * 状态
-     */
-    @JsonIgnore
-    private Integer status;
+	/**
+	 * 创建日期
+	 */
+	@JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
+	@DateTimeFormat(pattern = "yyyy-MM-dd")
+	private Date createDate;
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
+	/**
+	 * 库存
+	 */
+	private Long stock;
 
-    public Integer getId() {
-        return this.id;
-    }
+	/**
+	 * 状态
+	 */
+	private Integer status;
 
-    public void setCompanyId(String companyId) {
-        this.companyId = companyId;
-    }
 
-    public String getCompanyId() {
-        return this.companyId;
-    }
+	public void setId(Integer id){
+		this.id = id;
+	}
 
-    public void setCode(String code) {
-        this.code = code;
-    }
+	public Integer getId(){
+		return this.id;
+	}
 
-    public String getCode() {
-        return this.code;
-    }
+	public void setCompanyId(String companyId){
+		this.companyId = companyId;
+	}
 
-    public void setProductName(String productName) {
-        this.productName = productName;
-    }
+	public String getCompanyId(){
+		return this.companyId;
+	}
 
-    public String getProductName() {
-        return this.productName;
-    }
+	public void setCode(String code){
+		this.code = code;
+	}
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
+	public String getCode(){
+		return this.code;
+	}
 
-    public BigDecimal getPrice() {
-        return this.price;
-    }
+	public void setProductName(String productName){
+		this.productName = productName;
+	}
 
-    public void setSkuType(Integer skuType) {
-        this.skuType = skuType;
-    }
+	public String getProductName(){
+		return this.productName;
+	}
 
-    public Integer getSkuType() {
-        return this.skuType;
-    }
+	public void setPrice(BigDecimal price){
+		this.price = price;
+	}
 
-    public void setColorType(Integer colorType) {
-        this.colorType = colorType;
-    }
+	public BigDecimal getPrice(){
+		return this.price;
+	}
 
-    public Integer getColorType() {
-        return this.colorType;
-    }
+	public void setSkuType(Integer skuType){
+		this.skuType = skuType;
+	}
 
-    public void setCreateTime(Date createTime) {
-        this.createTime = createTime;
-    }
+	public Integer getSkuType(){
+		return this.skuType;
+	}
 
-    public Date getCreateTime() {
-        return this.createTime;
-    }
+	public void setColorType(Integer colorType){
+		this.colorType = colorType;
+	}
 
-    public void setCreateDate(Date createDate) {
-        this.createDate = createDate;
-    }
+	public Integer getColorType(){
+		return this.colorType;
+	}
 
-    public Date getCreateDate() {
-        return this.createDate;
-    }
+	public void setCreateTime(Date createTime){
+		this.createTime = createTime;
+	}
 
-    public void setStock(Long stock) {
-        this.stock = stock;
-    }
+	public Date getCreateTime(){
+		return this.createTime;
+	}
 
-    public Long getStock() {
-        return this.stock;
-    }
+	public void setCreateDate(Date createDate){
+		this.createDate = createDate;
+	}
 
-    public void setStatus(Integer status) {
-        this.status = status;
-    }
+	public Date getCreateDate(){
+		return this.createDate;
+	}
 
-    public Integer getStatus() {
-        return this.status;
-    }
+	public void setStock(Long stock){
+		this.stock = stock;
+	}
 
-    @Override
-    public String toString() {
-        return "product information:" + (id == null ? "空" : id) + ",公司id:" + (companyId == null ? "空" : companyId) + ",商品编号:" + (code == null ? "空" : code) + ",商品名称:" + (productName == null ? "空" : productName) + ",价格:" + (price == null ? "空" : price) + ",sku类型:" + (skuType == null ? "空" : skuType) + ",颜色类型:" + (colorType == null ? "空" : colorType) + ",创建时间:" + (createTime == null ? "空" : createTime) + ",创建日期:" + (createDate == null ? "空" : createDate) + ",库存:" + (stock == null ? "空" : stock) + ",状态:" + (status == null ? "空" : status) ;
-    }
+	public Long getStock(){
+		return this.stock;
+	}
 
-    public static void main(String[] args) {
-        ProductInfo productInfo = new ProductInfo();
-        System.out.println(productInfo);
-    }
+	public void setStatus(Integer status){
+		this.status = status;
+	}
+
+	public Integer getStatus(){
+		return this.status;
+	}
+
+	@Override
+	public String toString (){
+		return "自增id:"+(id == null ? "空" : id)+"，公司id:"+(companyId == null ? "空" : companyId)+"，商品编号:"+(code == null ? "空" : code)+"，商品名称:"+(productName == null ? "空" : productName)+"，价格:"+(price == null ? "空" : price)+"，sku类型:"+(skuType == null ? "空" : skuType)+"，颜色类型:"+(colorType == null ? "空" : colorType)+"，创建时间:"+(createTime == null ? "空" : DateUtil.format(createTime, DateTimePatternEnum.YYYY_MM_DD_HH_MM_SS.getPattern()))+"，创建日期:"+(createDate == null ? "空" : DateUtil.format(createDate, DateTimePatternEnum.YYYY_MM_DD.getPattern()))+"，库存:"+(stock == null ? "空" : stock)+"，状态:"+(status == null ? "空" : status);
+	}
 }
