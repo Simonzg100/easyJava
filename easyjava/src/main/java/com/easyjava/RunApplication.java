@@ -26,6 +26,10 @@ public class RunApplication {
                 BuildBeanQuery.execute(tableInfo);
 
                 BuildMapper.execute(tableInfo);
+
+                BuildMapperXml.execute(tableInfo);
+
+                BuildService.execute(tableInfo);
             }
             logger.info("生成代码成功，代码在->" + PropertiesUtils.getString("path.base"));
         } catch (Exception e) {
